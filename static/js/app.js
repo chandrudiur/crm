@@ -2,6 +2,7 @@
  // ===== NOTIFICATIONS =====
  function showNotification(message, type = 'info', duration = 5000) {
      const notification = document.createElement('div');
+ }
 -    notification.className = `alert alert-${type} alert-dismissible fade show notification-toast`;
 +    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show notification-toast`;
      notification.style.cssText = `
