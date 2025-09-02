@@ -1,0 +1,404 @@
+{% extends "base.html" %}
+
+{% block title %}Survey Tracker - Myndwell Admin{% endblock %}
+{% block page_title %}Survey Status Tracker{% endblock %}
+
+{% block content %}
+<div class="survey-tracker-page">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('survey_management_hub') }}">Survey Management Hub</a>
+            </li>
+            <li class="breadcrumb-item active">Survey Status Tracker</li>
+        </ol>
+    </nav>
+
+    <!-- Filter Controls -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="companyDropdown" class="form-label">Select Company</label>
+                    <select class="form-select" id="companyDropdown">
+                        <option value="">Select Company</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}">{{ company.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="surveyDropdown" class="form-label">Select Survey</label>
+                    <select class="form-select" id="surveyDropdown" disabled>
+                        <option value="">Select Survey</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="btn-group w-100">
+                        <button class="btn btn-primary" id="fetchButton">
+                            <i class="bi bi-search me-2"></i>Fetch Data
+                        </button>
+                        <button class="btn btn-outline-secondary" id="resetButton">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search and Actions -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Search by name or email...">
+                        <button class="btn btn-outline-primary" id="searchButton">Search</button>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button class="btn btn-warning me-2" id="sendEmailButton" disabled>
+                        <i class="bi bi-envelope me-2"></i>Send Reminders
+                    </button>
+                    <div class="btn-group">
+                        <button class="btn btn-success" id="downloadResponses" style="display: none;">
+                            <i class="bi bi-download me-2"></i>Download Responses
+                        </button>
+                        <button class="btn btn-info" id="downloadScores" style="display: none;">
+                            <i class="bi bi-download me-2"></i>Download Scores
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Survey Participants Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="participantsTable">
+                    <thead>
+                        <tr>
+                            <th width="50">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="selectAllCheckbox">
+                                </div>
+                            </th>
+                            <th>S.No</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Deployment Status</th>
+                            <th>Survey Status</th>
+                            <th>Report Status</th>
+                            <th>Days Since Sent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic content will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-5" style="display: none;">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <h5 class="mt-3">No Data Available</h5>
+                <p class="text-muted">Select a company and survey to view participant status.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let surveyStatusData = [];
+
+// Company dropdown change handler
+document.getElementById('companyDropdown').addEventListener('change', async function() {
+    const companyId = this.value;
+    const surveyDropdown = document.getElementById('surveyDropdown');
+    
+    // Reset survey dropdown
+    surveyDropdown.innerHTML = '<option value="">Select Survey</option>';
+    surveyDropdown.disabled = !companyId;
+    
+    if (!companyId) return;
+    
+    try {
+        const response = await fetch(`/api/companies/${companyId}/surveys`);
+        const surveys = await response.json();
+        
+        surveys.forEach(survey => {
+            const option = document.createElement('option');
+            option.value = survey.SurveyId;
+            option.textContent = survey.SurveyName;
+            option.dataset.companySurveyId = survey.CompanySurveyId;
+            surveyDropdown.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Error fetching surveys:', error);
+        showNotification('Error loading surveys', 'danger');
+    }
+});
+
+// Fetch button handler
+document.getElementById('fetchButton').addEventListener('click', async function() {
+    const companyId = document.getElementById('companyDropdown').value;
+    const surveySelect = document.getElementById('surveyDropdown');
+    const selectedOption = surveySelect.options[surveySelect.selectedIndex];
+    
+    if (!companyId || !selectedOption || selectedOption.value === "") {
+        showNotification('Please select both company and survey', 'warning');
+        return;
+    }
+    
+    const companySurveyId = selectedOption.dataset.companySurveyId;
+    
+    try {
+        showLoading(this, 'Fetching...');
+        
+        const response = await fetch(`/api/company-surveys/${companySurveyId}/status`);
+        surveyStatusData = await response.json();
+        
+        renderTable(surveyStatusData);
+        
+        // Enable action buttons
+        document.getElementById('sendEmailButton').disabled = false;
+        document.getElementById('downloadResponses').style.display = 'inline-block';
+        document.getElementById('downloadScores').style.display = 'inline-block';
+        
+    } catch (error) {
+        console.error('Error fetching survey status:', error);
+        showNotification('Error fetching survey data', 'danger');
+    } finally {
+        hideLoading(this);
+    }
+});
+
+// Reset button handler
+document.getElementById('resetButton').addEventListener('click', function() {
+    document.getElementById('companyDropdown').value = '';
+    document.getElementById('surveyDropdown').innerHTML = '<option value="">Select Survey</option>';
+    document.getElementById('surveyDropdown').disabled = true;
+    document.getElementById('searchInput').value = '';
+    document.getElementById('sendEmailButton').disabled = true;
+    document.getElementById('downloadResponses').style.display = 'none';
+    document.getElementById('downloadScores').style.display = 'none';
+    
+    const tableBody = document.querySelector('#participantsTable tbody');
+    tableBody.innerHTML = '';
+    document.getElementById('emptyState').style.display = 'block';
+    
+    surveyStatusData = [];
+});
+
+// Search functionality
+document.getElementById('searchButton').addEventListener('click', function() {
+    if (surveyStatusData.length === 0) {
+        showNotification('Please fetch data before searching', 'warning');
+        return;
+    }
+    
+    const searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+    const filtered = surveyStatusData.filter(item =>
+        item.FullName.toLowerCase().includes(searchTerm) ||
+        item.Email.toLowerCase().includes(searchTerm)
+    );
+    
+    renderTable(filtered);
+});
+
+// Enter key search
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        document.getElementById('searchButton').click();
+    }
+});
+
+// Select all checkbox handler
+document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.participant-checkbox:not(:disabled)');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Send email button handler
+document.getElementById('sendEmailButton').addEventListener('click', async function() {
+    const checkboxes = document.querySelectorAll('.participant-checkbox:checked');
+    
+    if (checkboxes.length === 0) {
+        showNotification('Please select at least one participant', 'warning');
+        return;
+    }
+    
+    const selectedUsers = Array.from(checkboxes).map(checkbox => ({
+        email: checkbox.dataset.email,
+        fullName: checkbox.dataset.fullname,
+        pcsLinkId: checkbox.dataset.pcslinkid
+    }));
+    
+    try {
+        showLoading(this, 'Sending...');
+        
+        const response = await fetch('/api/send-reminder-emails', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(selectedUsers)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showNotification('Reminder emails sent successfully!', 'success');
+            
+            // Uncheck all checkboxes
+            checkboxes.forEach(checkbox => checkbox.checked = false);
+            document.getElementById('selectAllCheckbox').checked = false;
+        } else {
+            showNotification('Error: ' + result.error, 'danger');
+        }
+    } catch (error) {
+        console.error('Error sending emails:', error);
+        showNotification('Error sending reminder emails', 'danger');
+    } finally {
+        hideLoading(this);
+    }
+});
+
+// Render table function
+function renderTable(data) {
+    const tableBody = document.querySelector('#participantsTable tbody');
+    const emptyState = document.getElementById('emptyState');
+    
+    tableBody.innerHTML = '';
+    
+    if (data.length === 0) {
+        emptyState.style.display = 'block';
+        return;
+    }
+    
+    emptyState.style.display = 'none';
+    
+    data.forEach((item, index) => {
+        const row = document.createElement('tr');
+        const isCheckboxDisabled = !(item.DeploymentStatus === 'Deployed' && 
+                                   (item.SurveyStatus === 'Not Started' || item.SurveyStatus === 'In Progress'));
+        
+        row.innerHTML = `
+            <td>
+                <div class="form-check">
+                    <input class="form-check-input participant-checkbox" type="checkbox" 
+                           data-email="${item.Email}" 
+                           data-fullname="${item.FullName}" 
+                           data-pcslinkid="${item.PersonId}" 
+                           ${isCheckboxDisabled ? 'disabled' : ''}>
+                </div>
+            </td>
+            <td>${index + 1}</td>
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar me-2">
+                        <span class="avatar-text">${item.FullName.charAt(0).toUpperCase()}</span>
+                    </div>
+                    ${item.FullName}
+                </div>
+            </td>
+            <td>${item.Email}</td>
+            <td>
+                <span class="badge bg-${item.DeploymentStatus === 'Deployed' ? 'success' : 'secondary'}">
+                    ${item.DeploymentStatus}
+                </span>
+            </td>
+            <td>
+                <span class="badge bg-${
+                    item.SurveyStatus === 'Completed' ? 'success' :
+                    item.SurveyStatus === 'In Progress' ? 'warning' : 'secondary'
+                }">
+                    ${item.SurveyStatus}
+                </span>
+            </td>
+            <td>
+                <span class="badge bg-${item.ReportStatus === 'Generated' ? 'info' : 'secondary'}">
+                    ${item.ReportStatus}
+                </span>
+            </td>
+            <td>${item.DaysSinceSent || 0}</td>
+        `;
+        
+        tableBody.appendChild(row);
+    });
+    
+    // Update select all checkbox state
+    const enabledCheckboxes = document.querySelectorAll('.participant-checkbox:not(:disabled)');
+    document.getElementById('selectAllCheckbox').disabled = enabledCheckboxes.length === 0;
+}
+
+// Download handlers
+document.getElementById('downloadResponses').addEventListener('click', async function() {
+    const surveySelect = document.getElementById('surveyDropdown');
+    const selectedOption = surveySelect.options[surveySelect.selectedIndex];
+    
+    if (!selectedOption || selectedOption.value === "") {
+        showNotification('Please select a survey first', 'warning');
+        return;
+    }
+    
+    const companySurveyId = selectedOption.dataset.companySurveyId;
+    
+    try {
+        showLoading(this, 'Downloading...');
+        
+        // Mock download - in real implementation, this would download actual file
+        setTimeout(() => {
+            showNotification('Survey responses downloaded successfully!', 'success');
+            hideLoading(this);
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error downloading responses:', error);
+        showNotification('Error downloading responses', 'danger');
+        hideLoading(this);
+    }
+});
+
+document.getElementById('downloadScores').addEventListener('click', async function() {
+    const surveySelect = document.getElementById('surveyDropdown');
+    const selectedOption = surveySelect.options[surveySelect.selectedIndex];
+    
+    if (!selectedOption || selectedOption.value === "") {
+        showNotification('Please select a survey first', 'warning');
+        return;
+    }
+    
+    const companySurveyId = selectedOption.dataset.companySurveyId;
+    
+    try {
+        showLoading(this, 'Downloading...');
+        
+        // Mock download - in real implementation, this would download actual file
+        setTimeout(() => {
+            showNotification('Survey scores downloaded successfully!', 'success');
+            hideLoading(this);
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error downloading scores:', error);
+        showNotification('Error downloading scores', 'danger');
+        hideLoading(this);
+    }
+});
+
+// Initialize empty state
+document.getElementById('emptyState').style.display = 'block';
+</script>
+{% endblock %}

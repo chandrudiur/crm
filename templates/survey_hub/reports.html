@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block title %}Report Generation - Myndwell Admin{% endblock %}
+{% block page_title %}Report Generation{% endblock %}
+
+{% block content %}
+<div class="report-generation-page">
+    <!-- Company Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-building me-2"></i>Select Company
+            </h5>
+        </div>
+        <div class="card-body">
+            <select class="form-select" id="companySelectR">
+                <option value="">Choose Company</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Survey Selection -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-clipboard-data me-2"></i>Select Survey
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="programSelectR" class="form-label">Program</label>
+                        <select class="form-select" id="programSelectR">
+                            <option value="">Select Program</option>
+                            <option value="wellness">Wellness</option>
+                            <option value="engagement">Engagement</option>
+                            <option value="culture">Culture</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="eventSelectR" class="form-label">Event</label>
+                        <select class="form-select" id="eventSelectR" disabled>
+                            <option value="">Select Event</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="surveySelectR" class="form-label">Survey</label>
+                        <select class="form-select" id="surveySelectR" disabled>
+                            <option value="">Select Survey</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Generation -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-file-earmark-bar-graph me-2"></i>Generate Report
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="surveyIdInputR" class="form-label">Survey ID</label>
+                        <input type="text" class="form-control" id="surveyIdInputR" disabled>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="personSelectR" class="form-label">Person</label>
+                        <select class="form-select" id="personSelectR">
+                            <option value="">Select Recipient</option>
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" id="generateReportBtn">
+                            <i class="bi bi-gear me-2"></i>Generate Report
+                        </button>
+                        
+                        <div class="text-center my-2">
+                            <span class="badge bg-light text-dark">OR</span>
+                        </div>
+                        
+                        <button class="btn btn-outline-primary" id="downloadReportBtn">
+                            <i class="bi bi-download me-2"></i>Download Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Report Distribution -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-info text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-share me-2"></i>Distribute Report
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="email-template">
+                        <div class="mb-3">
+                            <strong>Subject:</strong>
+                            <div class="bg-light p-2 rounded">Survey Analysis Report</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Message:</strong>
+                            <div class="bg-light p-3 rounded">
+                                <p>Dear Participant,</p>
+                                <p>The report for the survey you've submitted has been successfully generated. Click the link below to download it.</p>
+                                <p>If you have any questions, feel free to reach out to us.</p>
+                                <p class="mb-0">Best regards,<br>Myndwell Team</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Report Link:</strong>
+                            <div class="bg-light p-2 rounded">
+                                <code>https://reports.myndwell.com/[report-id]</code>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-info w-100" id="sendReportBtn">
+                            <i class="bi bi-envelope me-2"></i>Send Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedSurveyIdR = null;
+
+// Company selection handler for reports
+document.getElementById('companySelectR').addEventListener('change', async function() {
+    const companyId = this.value;
+    
+    // Reset dropdowns
+    document.getElementById('programSelectR').value = '';
+    document.getElementById('eventSelectR').innerHTML = '<option value="">Select Event</option>';
+    document.getElementById('eventSelectR').disabled = true;
+    document.getElementById('surveySelectR').innerHTML = '<option value="">Select Survey</option>';
+    document.getElementById('surveySelectR').disabled = true;
+    document.getElementById('personSelectR').innerHTML = '<option value="">Select Recipient</option>';
+    
+    if (!companyId) return;
+    
+    // Enable program selection
+    document.getElementById('programSelectR').disabled = false;
+});
+
+// Program selection handler
+document.getElementById('programSelectR').addEventListener('change', function() {
+    const programId = this.value;
+    const eventSelect = document.getElementById('eventSelectR');
+    
+    eventSelect.innerHTML = '<option value="">Select Event</option>';
+    eventSelect.disabled = !programId;
+    
+    if (programId) {
+        // Mock events
+        const events = [
+            { EventId: 'e1', EventName: 'Q1 2024 Survey' },
+            { EventId: 'e2', EventName: 'Q2 2024 Survey' }
+        ];
+        
+        events.forEach(event => {
+            const option = document.createElement('option');
+            option.value = event.EventId;
+            option.textContent = event.EventName;
+            eventSelect.appendChild(option);
+        });
+    }
+});
+
+// Event selection handler
+document.getElementById('eventSelectR').addEventListener('change', function() {
+    const eventId = this.value;
+    const surveySelect = document.getElementById('surveySelectR');
+    
+    surveySelect.innerHTML = '<option value="">Select Survey</option>';
+    surveySelect.disabled = !eventId;
+    
+    if (eventId) {
+        // Mock surveys
+        const surveys = [
+            { SurveyName: 'Employee Satisfaction Survey', CompanySurveyId: 'cs1' },
+            { SurveyName: 'Wellness Assessment', CompanySurveyId: 'cs2' }
+        ];
+        
+        surveys.forEach(survey => {
+            const option = document.createElement('option');
+            option.value = survey.CompanySurveyId;
+            option.textContent = survey.SurveyName;
+            surveySelect.appendChild(option);
+        });
+    }
+});
+
+// Survey selection handler
+document.getElementById('surveySelectR').addEventListener('change', async function() {
+    selectedSurveyIdR = this.value;
+    const surveyIdInput = document.getElementById('surveyIdInputR');
+    const personSelect = document.getElementById('personSelectR');
+    
+    personSelect.innerHTML = '<option value="">Select Recipient</option>';
+    
+    if (selectedSurveyIdR) {
+        const extractedId = selectedSurveyIdR.split('-')[1] || selectedSurveyIdR;
+        surveyIdInput.value = extractedId;
+        
+        // Load persons for this survey
+        const mockPersons = [
+            { PersonId: 'p1', FullName: 'John Doe', Email: 'john.doe@company.com' },
+            { PersonId: 'p2', FullName: 'Jane Smith', Email: 'jane.smith@company.com' }
+        ];
+        
+        mockPersons.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person.PersonId;
+            option.textContent = `${person.FullName} (${person.Email})`;
+            personSelect.appendChild(option);
+        });
+    } else {
+        surveyIdInput.value = '';
+    }
+});
+
+// Generate report button handler
+document.getElementById('generateReportBtn').addEventListener('click', async function() {
+    const personId = document.getElementById('personSelectR').value;
+    const companySurveyId = document.getElementById('surveySelectR').value;
+    
+    if (!personId || !companySurveyId) {
+        showNotification('Please select a person and survey', 'warning');
+        return;
+    }
+    
+    try {
+        showLoading(this, 'Generating...');
+        
+        // Mock report generation
+        setTimeout(() => {
+            showNotification('Report generated successfully!', 'success');
+            hideLoading(this);
+        }, 2000);
+        
+    } catch (error) {
+        console.error('Error generating report:', error);
+        showNotification('Error generating report', 'danger');
+        hideLoading(this);
+    }
+});
+
+// Download report button handler
+document.getElementById('downloadReportBtn').addEventListener('click', async function() {
+    const personId = document.getElementById('personSelectR').value;
+    const companySurveyId = document.getElementById('surveySelectR').value;
+    
+    if (!personId || !companySurveyId) {
+        showNotification('Please select a person and survey', 'warning');
+        return;
+    }
+    
+    try {
+        showLoading(this, 'Downloading...');
+        
+        // Mock download
+        setTimeout(() => {
+            showNotification('Report downloaded successfully!', 'success');
+            hideLoading(this);
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error downloading report:', error);
+        showNotification('Error downloading report', 'danger');
+        hideLoading(this);
+    }
+});
+
+// Send report button handler
+document.getElementById('sendReportBtn').addEventListener('click', async function() {
+    const personId = document.getElementById('personSelectR').value;
+    const companySurveyId = document.getElementById('surveySelectR').value;
+    
+    if (!personId || !companySurveyId) {
+        showNotification('Please select a person and survey', 'warning');
+        return;
+    }
+    
+    try {
+        showLoading(this, 'Sending...');
+        
+        // Mock email sending
+        setTimeout(() => {
+            showNotification('Report sent successfully!', 'success');
+            hideLoading(this);
+        }, 1500);
+        
+    } catch (error) {
+        console.error('Error sending report:', error);
+        showNotification('Error sending report', 'danger');
+        hideLoading(this);
+    }
+});
+</script>
+{% endblock %}

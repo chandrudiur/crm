@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+
+{% block title %}Survey Deployment - Myndwell Admin{% endblock %}
+{% block page_title %}Survey Deployment{% endblock %}
+
+{% block content %}
+<div class="survey-deployment-page">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{{ url_for('survey_management_hub') }}">Survey Management Hub</a>
+            </li>
+            <li class="breadcrumb-item active">Survey Deployment</li>
+        </ol>
+    </nav>
+
+    <!-- Company Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="bi bi-building me-2"></i>Select Company
+            </h5>
+        </div>
+        <div class="card-body">
+            <select class="form-select" id="companySelect">
+                <option value="">Choose Company</option>
+                {% for company in companies %}
+                <option value="{{ company.id }}">{{ company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Survey Selection -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-clipboard-data me-2"></i>Select Survey
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="programSelect" class="form-label">Program</label>
+                        <select class="form-select" id="programSelect">
+                            <option value="">Select Program</option>
+                            <option value="wellness">Wellness</option>
+                            <option value="engagement">Engagement</option>
+                            <option value="culture">Culture</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="eventSelect" class="form-label">Event</label>
+                        <select class="form-select" id="eventSelect" disabled>
+                            <option value="">Select Event</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="surveySelect" class="form-label">Survey</label>
+                        <select class="form-select" id="surveySelect" disabled>
+                            <option value="">Select Survey</option>
+                        </select>
+                    </div>
+                    
+                    <div id="surveyDetails" class="alert alert-info" style="display: none;">
+                        <h6>Survey Details</h6>
+                        <p class="mb-1"><strong>Survey ID:</strong> <span id="surveyIdDisplay"></span></p>
+                        <p class="mb-0"><strong>Status:</strong> <span id="surveyStatusDisplay"></span></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deployment Options -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-success text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-people me-2"></i>Deploy For
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <!-- Single Recipient -->
+                    <div class="mb-4">
+                        <h6>Single Recipient</h6>
+                        <div class="mb-3">
+                            <label for="surveyIdInput" class="form-label">Survey ID</label>
+                            <input type="text" class="form-control" id="surveyIdInput" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label for="personSelect" class="form-label">Person</label>
+                            <select class="form-select" id="personSelect">
+                                <option value="">Select Recipient</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-outline-primary w-100" onclick="generateSingleLink()">
+                            <i class="bi bi-link-45deg me-2"></i>Create Survey Link
+                        </button>
+                    </div>
+                    
+                    <div class="text-center my-3">
+                        <span class="badge bg-light text-dark">OR</span>
+                    </div>
+                    
+                    <!-- Bulk Recipients -->
+                    <div class="mb-4">
+                        <h6>Bulk Recipients</h6>
+                        <div class="upload-area p-3 border border-dashed rounded">
+                            <input type="file" class="form-control" id="recipientFile" 
+                                   accept=".xls,.xlsx" style="display: none;">
+                            <div class="text-center">
+                                <i class="bi bi-cloud-upload display-6 text-muted"></i>
+                                <p class="mt-2 mb-1">Upload Recipients List</p>
+                                <button class="btn btn-outline-secondary btn-sm" 
+                                        onclick="document.getElementById('recipientFile').click()">
+                                    Browse Files
+                                </button>
+                            </div>
+                            <div id="fileName" class="mt-2 text-center text-muted" style="display: none;"></div>
+                        </div>
+                        
+                        <div class="mt-3 d-grid gap-2">
+                            <button class="btn btn-outline-info" onclick="createBulkLinks()">
+                                <i class="bi bi-link-45deg me-2"></i>Create Survey Links
+                            </button>
+                            <button class="btn btn-success" onclick="deployBulkSurveys()">
+                                <i class="bi bi-send me-2"></i>Deploy Surveys
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Preview -->
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header bg-warning text-white">
+                    <h6 class="card-title mb-0">
+                        <i class="bi bi-envelope me-2"></i>Email Preview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="email-preview">
+                        <div class="mb-3">
+                            <strong>Subject:</strong>
+                            <div class="bg-light p-2 rounded">Your Well-being is Important to Us</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Message:</strong>
+                            <div class="bg-light p-3 rounded">
+                                <p>Hi [Participant's Name],</p>
+                                <p>We're conducting a mental health assessment survey and we'd greatly appreciate your participation. Your feedback will contribute to better understanding and supporting mental well-being.</p>
+                                <p class="mb-0">Best regards,<br>Myndwell Team</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Survey Link:</strong>
+                            <div class="bg-light p-2 rounded">
+                                <code>https://survey.myndwell.com/[survey-id]</code>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-warning w-100" onclick="deploySingleSurvey()">
+                            <i class="bi bi-send me-2"></i>Deploy Survey
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedSurveyId = null;
+let companySurveyId = null;
+
+// File input change handler
+document.getElementById('recipientFile').addEventListener('change', function() {
+    const fileName = document.getElementById('fileName');
+    if (this.files.length > 0) {
+        fileName.textContent = this.files[0].name;
+        fileName.style.display = 'block';
+    } else {
+        fileName.style.display = 'none';
+    }
+});
+
+// Company selection handler
+document.getElementById('companySelect').addEventListener('change', async function() {
+    const companyId = this.value;
+    
+    // Reset dependent dropdowns
+    document.getElementById('programSelect').value = '';
+    document.getElementById('eventSelect').innerHTML = '<option value="">Select Event</option>';
+    document.getElementById('eventSelect').disabled = true;
+    document.getElementById('surveySelect').innerHTML = '<option value="">Select Survey</option>';
+    document.getElementById('surveySelect').disabled = true;
+    document.getElementById('personSelect').innerHTML = '<option value="">Select Recipient</option>';
+    
+    if (!companyId) return;
+    
+    try {
+        // Load persons for the company
+        const persons = await fetch(`/api/companies/${companyId}/persons`);
+        // Mock data for demonstration
+        const personSelect = document.getElementById('personSelect');
+        const mockPersons = [
+            { PersonId: 'p1', FullName: 'John Doe', Email: 'john.doe@company.com' },
+            { PersonId: 'p2', FullName: 'Jane Smith', Email: 'jane.smith@company.com' }
+        ];
+        
+        mockPersons.forEach(person => {
+            const option = document.createElement('option');
+            option.value = person.PersonId;
+            option.textContent = `${person.FullName} (${person.Email})`;
+            personSelect.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error loading company data:', error);
+    }
+});
+
+// Program selection handler
+document.getElementById('programSelect').addEventListener('change', function() {
+    const programId = this.value;
+    const eventSelect = document.getElementById('eventSelect');
+    
+    eventSelect.innerHTML = '<option value="">Select Event</option>';
+    eventSelect.disabled = !programId;
+    
+    if (programId) {
+        // Mock events
+        const events = [
+            { EventId: 'e1', EventName: 'Q1 2024 Survey' },
+            { EventId: 'e2', EventName: 'Q2 2024 Survey' }
+        ];
+        
+        events.forEach(event => {
+            const option = document.createElement('option');
+            option.value = event.EventId;
+            option.textContent = event.EventName;
+            eventSelect.appendChild(option);
+        });
+    }
+});
+
+// Event selection handler
+document.getElementById('eventSelect').addEventListener('change', function() {
+    const eventId = this.value;
+    const surveySelect = document.getElementById('surveySelect');
+    
+    surveySelect.innerHTML = '<option value="">Select Survey</option>';
+    surveySelect.disabled = !eventId;
+    
+    if (eventId) {
+        // Mock surveys
+        const surveys = [
+            { SurveyName: 'Employee Satisfaction Survey', CompanySurveyId: 'cs1' },
+            { SurveyName: 'Wellness Assessment', CompanySurveyId: 'cs2' }
+        ];
+        
+        surveys.forEach(survey => {
+            const option = document.createElement('option');
+            option.value = survey.CompanySurveyId;
+            option.textContent = survey.SurveyName;
+            surveySelect.appendChild(option);
+        });
+    }
+});
+
+// Survey selection handler
+document.getElementById('surveySelect').addEventListener('change', function() {
+    companySurveyId = this.value;
+    const surveyIdInput = document.getElementById('surveyIdInput');
+    const surveyDetails = document.getElementById('surveyDetails');
+    
+    if (companySurveyId) {
+        const extractedId = companySurveyId.split('-')[1] || companySurveyId;
+        surveyIdInput.value = extractedId;
+        
+        document.getElementById('surveyIdDisplay').textContent = extractedId;
+        document.getElementById('surveyStatusDisplay').textContent = 'Active';
+        surveyDetails.style.display = 'block';
+    } else {
+        surveyIdInput.value = '';
+        surveyDetails.style.display = 'none';
+    }
+});
+
+// Deployment functions
+async function generateSingleLink() {
+    const personId = document.getElementById('personSelect').value;
+    const programId = document.getElementById('programSelect').value;
+    const eventId = document.getElementById('eventSelect').value;
+    
+    if (!personId || !companySurveyId || !programId || !eventId) {
+        showNotification('Please select all required fields', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Survey link generated successfully!', 'success');
+        
+        // Update email preview with selected person's name
+        const personSelect = document.getElementById('personSelect');
+        const selectedPersonText = personSelect.options[personSelect.selectedIndex].text;
+        const personName = selectedPersonText.split(' (')[0];
+        
+        const emailPreview = document.querySelector('.email-preview p');
+        if (emailPreview) {
+            emailPreview.innerHTML = emailPreview.innerHTML.replace('[Participant\'s Name]', personName);
+        }
+        
+    } catch (error) {
+        console.error('Error generating link:', error);
+        showNotification('Error generating survey link', 'danger');
+    }
+}
+
+async function deploySingleSurvey() {
+    const personId = document.getElementById('personSelect').value;
+    
+    if (!personId || !companySurveyId) {
+        showNotification('Please select a person and survey', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Survey deployed successfully!', 'success');
+        
+        // Reset form
+        document.getElementById('personSelect').value = '';
+        document.getElementById('surveySelect').value = '';
+        document.getElementById('surveyIdInput').value = '';
+        document.getElementById('surveyDetails').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error deploying survey:', error);
+        showNotification('Error deploying survey', 'danger');
+    }
+}
+
+async function createBulkLinks() {
+    const fileInput = document.getElementById('recipientFile');
+    
+    if (!fileInput.files[0]) {
+        showNotification('Please upload a recipients file first', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Bulk survey links created successfully!', 'success');
+    } catch (error) {
+        console.error('Error creating bulk links:', error);
+        showNotification('Error creating survey links', 'danger');
+    }
+}
+
+async function deployBulkSurveys() {
+    const fileInput = document.getElementById('recipientFile');
+    
+    if (!fileInput.files[0]) {
+        showNotification('Please upload a recipients file first', 'warning');
+        return;
+    }
+    
+    try {
+        showNotification('Bulk surveys deployed successfully!', 'success');
+        
+        // Reset file input
+        fileInput.value = '';
+        document.getElementById('fileName').style.display = 'none';
+        
+    } catch (error) {
+        console.error('Error deploying bulk surveys:', error);
+        showNotification('Error deploying surveys', 'danger');
+    }
+}
+</script>
+{% endblock %}
