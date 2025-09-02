@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Create Company - Myndwell Admin{% endblock %}
+{% block page_title %}Create Company{% endblock %}
+
+{% block content %}
+<div class="create-company-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Company Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Company Name *</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="domains" class="form-label">Email Domains *</label>
+                            <input type="text" class="form-control" id="domains" name="domains" 
+                                   placeholder="example.com, company.org" required>
+                            <div class="form-text">
+                                Enter comma-separated email domains for this company
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="status" class="form-label">Status *</label>
+                            <select class="form-select" id="status" name="status" required>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('companies_index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Company</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <div class="guideline-item">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        <div>
+                            <strong>Company Name</strong>
+                            <small class="text-muted d-block">Use the official company name as it appears in business documents.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <i class="bi bi-envelope text-success"></i>
+                        <div>
+                            <strong>Email Domains</strong>
+                            <small class="text-muted d-block">List all email domains used by company employees for automatic user assignment.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <i class="bi bi-shield-check text-info"></i>
+                        <div>
+                            <strong>Status</strong>
+                            <small class="text-muted d-block">Active companies can have users and deploy surveys. Inactive companies are read-only.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

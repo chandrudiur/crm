@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block title %}Companies - Myndwell Admin{% endblock %}
+{% block page_title %}Company Management{% endblock %}
+
+{% block content %}
+<div class="companies-page">
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="search-box">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" placeholder="Search companies..." id="companySearch">
+            </div>
+        </div>
+        <div>
+            <a href="{{ url_for('companies_create') }}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> Add Company
+            </a>
+        </div>
+    </div>
+
+    <!-- Companies Grid -->
+    {% if companies %}
+    <div class="row">
+        {% for company in companies %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card company-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div class="company-icon">
+                            <i class="bi bi-building-fill"></i>
+                        </div>
+                        <span class="badge bg-{{ 'success' if company.status == 'active' else 'secondary' }}">
+                            {{ company.status.title() }}
+                        </span>
+                    </div>
+                    
+                    <h5 class="card-title">{{ company.name }}</h5>
+                    
+                    <div class="company-domains mb-3">
+                        {% for domain in company.domains %}
+                        <span class="badge bg-light text-dark me-1">{{ domain }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="company-meta">
+                        <div class="meta-item">
+                            <small class="text-muted">Created:</small>
+                            <span>{{ company.created_at.strftime('%Y-%m-%d') }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <small class="text-muted">Users:</small>
+                            <span>{{ (data_store.persons.values() | selectattr('company_id', 'equalto', company.id) | list | length) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <div class="btn-group w-100">
+                        <button class="btn btn-outline-primary" onclick="editCompany('{{ company.id }}')">
+                            <i class="bi bi-pencil"></i> Edit
+                        </button>
+                        <a href="{{ url_for('users_index') }}?company_id={{ company.id }}" 
+                           class="btn btn-outline-info">
+                            <i class="bi bi-people"></i> Users
+                        </a>
+                        <button class="btn btn-outline-danger" onclick="deleteCompany('{{ company.id }}', '{{ company.name }}')">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state text-center py-5">
+        <i class="bi bi-building display-4 text-muted"></i>
+        <h5 class="mt-3">No Companies</h5>
+        <p class="text-muted">Add your first company to get started with user management.</p>
+        <a href="{{ url_for('companies_create') }}" class="btn btn-primary">
+            <i class="bi bi-plus"></i> Add Company
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong id="deleteCompanyName"></strong>?</p>
+                <p class="text-danger"><i class="bi bi-exclamation-triangle"></i> This will also affect all users associated with this company.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" id="deleteForm" class="d-inline">
+                    <button type="submit" class="btn btn-danger">Delete Company</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Search functionality
+document.getElementById('companySearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const companyCards = document.querySelectorAll('.company-card');
+    
+    companyCards.forEach(card => {
+        const text = card.textContent.toLowerCase();
+        const col = card.closest('.col-lg-4');
+        col.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Edit company function
+function editCompany(companyId) {
+    window.location.href = `/companies/${companyId}/edit`;
+}
+
+// Delete company function
+function deleteCompany(companyId, companyName) {
+    document.getElementById('deleteCompanyName').textContent = companyName;
+    document.getElementById('deleteForm').action = `/companies/${companyId}/delete`;
+    
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+}
+</script>
+{% endblock %}

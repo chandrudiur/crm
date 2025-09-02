@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+
+{% block title %}Deployments - Myndwell Admin{% endblock %}
+{% block page_title %}Survey Deployments{% endblock %}
+
+{% block content %}
+<div class="deployments-page">
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="filter-controls">
+            <select class="form-select" id="statusFilter" style="width: auto; display: inline-block;">
+                <option value="">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+            </select>
+        </div>
+        <div>
+            <a href="{{ url_for('deployments_create') }}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> New Deployment
+            </a>
+        </div>
+    </div>
+
+    <!-- Deployments Table -->
+    <div class="card">
+        <div class="card-body">
+            {% if deployments %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="deploymentsTable">
+                    <thead>
+                        <tr>
+                            <th>Deployment Name</th>
+                            <th>Company</th>
+                            <th>Survey</th>
+                            <th>Status</th>
+                            <th>Schedule</th>
+                            <th>Progress</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for deployment in deployments %}
+                        <tr data-status="{{ deployment.status.value }}">
+                            <td>
+                                <div>
+                                    <strong>{{ deployment.name }}</strong>
+                                    <div class="text-muted small">{{ deployment.channel.title() }}</div>
+                                </div>
+                            </td>
+                            <td>{{ company_map.get(deployment.company_id, 'Unknown') }}</td>
+                            <td>{{ survey_map.get(deployment.survey_template_id, 'Unknown') }}</td>
+                            <td>
+                                <span class="badge bg-{{
+                                    'success' if deployment.status.value == 'active' 
+                                    else 'primary' if deployment.status.value == 'scheduled'
+                                    else 'warning' if deployment.status.value == 'draft'
+                                    else 'info' if deployment.status.value == 'completed'
+                                    else 'secondary'
+                                }}">
+                                    {{ deployment.status.value.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if deployment.start_date %}
+                                <div>Start: {{ deployment.start_date.strftime('%Y-%m-%d') }}</div>
+                                {% endif %}
+                                {% if deployment.end_date %}
+                                <div>End: {{ deployment.end_date.strftime('%Y-%m-%d') }}</div>
+                                {% endif %}
+                                {% if not deployment.start_date and not deployment.end_date %}
+                                <span class="text-muted">Not scheduled</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if deployment.metrics %}
+                                <div class="progress mb-1" style="height: 8px;">
+                                    <div class="progress-bar" style="width: {{ deployment.metrics.get('completion_rate', 0) }}%"></div>
+                                </div>
+                                <small class="text-muted">
+                                    {{ deployment.metrics.get('responses_received', 0) }}/{{ deployment.metrics.get('invites_sent', 0) }} responses
+                                </small>
+                                {% else %}
+                                <span class="text-muted">No data</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('deployments_monitor', deployment_id=deployment.id) }}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    {% if deployment.status.value == 'draft' %}
+                                    <button class="btn btn-sm btn-outline-success" onclick="startDeployment('{{ deployment.id }}')">
+                                        <i class="bi bi-play"></i>
+                                    </button>
+                                    {% elif deployment.status.value == 'active' %}
+                                    <button class="btn btn-sm btn-outline-warning" onclick="pauseDeployment('{{ deployment.id }}')">
+                                        <i class="bi bi-pause"></i>
+                                    </button>
+                                    {% endif %}
+                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelDeployment('{{ deployment.id }}')">
+                                        <i class="bi bi-stop"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state text-center py-5">
+                <i class="bi bi-send display-4 text-muted"></i>
+                <h5 class="mt-3">No Deployments</h5>
+                <p class="text-muted">Create your first survey deployment to start collecting responses.</p>
+                <a href="{{ url_for('deployments_create') }}" class="btn btn-primary">
+                    <i class="bi bi-plus"></i> New Deployment
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Status filter
+document.getElementById('statusFilter').addEventListener('change', function(e) {
+    const filterValue = e.target.value;
+    const tableRows = document.querySelectorAll('#deploymentsTable tbody tr');
+    
+    tableRows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        row.style.display = !filterValue || status === filterValue ? '' : 'none';
+    });
+});
+
+// Deployment actions
+function startDeployment(deploymentId) {
+    if (confirm('Are you sure you want to start this deployment?')) {
+        // Implement start deployment functionality
+        console.log('Start deployment:', deploymentId);
+    }
+}
+
+function pauseDeployment(deploymentId) {
+    if (confirm('Are you sure you want to pause this deployment?')) {
+        // Implement pause deployment functionality
+        console.log('Pause deployment:', deploymentId);
+    }
+}
+
+function cancelDeployment(deploymentId) {
+    if (confirm('Are you sure you want to cancel this deployment? This action cannot be undone.')) {
+        // Implement cancel deployment functionality
+        console.log('Cancel deployment:', deploymentId);
+    }
+}
+</script>
+{% endblock %}

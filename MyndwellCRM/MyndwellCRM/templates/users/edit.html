@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Edit User - Myndwell Admin{% endblock %}
+{% block page_title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="edit-user-page">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Edit User Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Full Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ person.name }}" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">Email Address *</label>
+                                <input type="email" class="form-control" id="email" name="email" value="{{ person.email }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="company_id" class="form-label">Company *</label>
+                                <select class="form-select" id="company_id" name="company_id" required>
+                                    <option value="">Select Company</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.id }}" {% if company.id == person.company_id %}selected{% endif %}>
+                                        {{ company.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="status" class="form-label">Status *</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="active" {% if person.status.value == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="inactive" {% if person.status.value == 'inactive' %}selected{% endif %}>Inactive</option>
+                                    <option value="pending" {% if person.status.value == 'pending' %}selected{% endif %}>Pending</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="department" class="form-label">Department</label>
+                                <input type="text" class="form-control" id="department" name="department" 
+                                       value="{{ person.metadata.get('department', '') }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       value="{{ person.metadata.get('location', '') }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Roles *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="role_admin" name="roles" value="admin"
+                                       {% if 'admin' in person.roles %}checked{% endif %}>
+                                <label class="form-check-label" for="role_admin">Administrator</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="role_manager" name="roles" value="manager"
+                                       {% if 'manager' in person.roles %}checked{% endif %}>
+                                <label class="form-check-label" for="role_manager">Manager</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="role_user" name="roles" value="user"
+                                       {% if 'user' in person.roles %}checked{% endif %}>
+                                <label class="form-check-label" for="role_user">User</label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('users_index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Update User</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

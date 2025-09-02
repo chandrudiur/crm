@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Myndwell Admin{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <!-- KPI Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card kpi-card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-value">{{ total_companies }}</div>
+                            <div class="kpi-label">Total Companies</div>
+                        </div>
+                        <i class="bi bi-building kpi-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card kpi-card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-value">{{ total_users }}</div>
+                            <div class="kpi-label">Total Users</div>
+                        </div>
+                        <i class="bi bi-people kpi-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card kpi-card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-value">{{ active_surveys }}</div>
+                            <div class="kpi-label">Active Surveys</div>
+                        </div>
+                        <i class="bi bi-clipboard-data kpi-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card kpi-card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="kpi-value">{{ active_deployments }}</div>
+                            <div class="kpi-label">Active Deployments</div>
+                        </div>
+                        <i class="bi bi-send kpi-icon"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Survey Completion Trends</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="completionChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Response Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="responseChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Recent Deployments</h5>
+                    <a href="{{ url_for('deployments_index') }}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_deployments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Completion Rate</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for deployment in recent_deployments %}
+                                <tr>
+                                    <td>{{ deployment.name }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ 'success' if deployment.status.value == 'active' else 'secondary' }}">
+                                            {{ deployment.status.value.title() }}
+                                        </span>
+                                    </td>
+                                    <td>{{ deployment.created_at.strftime('%Y-%m-%d') }}</td>
+                                    <td>
+                                        {% if deployment.metrics.get('completion_rate') %}
+                                        <div class="progress" style="width: 100px;">
+                                            <div class="progress-bar" style="width: {{ deployment.metrics.completion_rate }}%"></div>
+                                        </div>
+                                        <small>{{ deployment.metrics.completion_rate }}%</small>
+                                        {% else %}
+                                        <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('deployments_monitor', deployment_id=deployment.id) }}" 
+                                           class="btn btn-sm btn-outline-primary">Monitor</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-inbox display-4 text-muted"></i>
+                        <p class="text-muted mt-2">No recent deployments</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Completion Trends Chart
+const completionCtx = document.getElementById('completionChart').getContext('2d');
+new Chart(completionCtx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+        datasets: [{
+            label: 'Completion Rate (%)',
+            data: [65, 72, 68, 78, 82, 85],
+            borderColor: 'rgb(27, 77, 114)',
+            backgroundColor: 'rgba(27, 77, 114, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                max: 100
+            }
+        }
+    }
+});
+
+// Response Distribution Chart
+const responseCtx = document.getElementById('responseChart').getContext('2d');
+new Chart(responseCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Completed', 'In Progress', 'Not Started'],
+        datasets: [{
+            data: [65, 20, 15],
+            backgroundColor: [
+                'rgb(27, 77, 114)',
+                'rgb(230, 126, 34)',
+                'rgb(149, 165, 166)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+</script>
+{% endblock %}

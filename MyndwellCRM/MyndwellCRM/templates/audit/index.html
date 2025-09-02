@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Trail - Myndwell Admin{% endblock %}
+{% block page_title %}Audit Trail{% endblock %}
+
+{% block content %}
+<div class="audit-page">
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="audit-filters">
+            <div class="row g-2">
+                <div class="col-auto">
+                    <select class="form-select" id="actionFilter">
+                        <option value="">All Actions</option>
+                        <option value="create">Create</option>
+                        <option value="update">Update</option>
+                        <option value="delete">Delete</option>
+                        <option value="login">Login</option>
+                        <option value="logout">Logout</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select" id="entityFilter">
+                        <option value="">All Entities</option>
+                        <option value="user">Users</option>
+                        <option value="company">Companies</option>
+                        <option value="survey">Surveys</option>
+                        <option value="deployment">Deployments</option>
+                        <option value="question">Questions</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <input type="date" class="form-control" id="dateFilter">
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-primary" onclick="applyFilters()">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="bi bi-x"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-outline-success" onclick="exportAuditLog()">
+                <i class="bi bi-download"></i> Export
+            </button>
+        </div>
+    </div>
+
+    <!-- Audit Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">1,247</div>
+                            <div class="stat-label">Total Events</div>
+                        </div>
+                        <i class="bi bi-activity stat-icon text-primary"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">89</div>
+                            <div class="stat-label">Today's Events</div>
+                        </div>
+                        <i class="bi bi-calendar-day stat-icon text-success"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">23</div>
+                            <div class="stat-label">Active Users</div>
+                        </div>
+                        <i class="bi bi-people stat-icon text-info"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="stat-value">0</div>
+                            <div class="stat-label">Failed Actions</div>
+                        </div>
+                        <i class="bi bi-exclamation-triangle stat-icon text-danger"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audit Log -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Activity Log</h5>
+        </div>
+        <div class="card-body">
+            {% if audit_logs %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="auditTable">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Actor</th>
+                            <th>Action</th>
+                            <th>Entity</th>
+                            <th>Details</th>
+                            <th>IP Address</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in audit_logs %}
+                        <tr data-action="{{ log.action }}" data-entity="{{ log.entity_type }}">
+                            <td>
+                                <div class="timestamp">
+                                    <div>{{ log.timestamp.strftime('%Y-%m-%d') }}</div>
+                                    <small class="text-muted">{{ log.timestamp.strftime('%H:%M:%S') }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="actor-info">
+                                    <strong>{{ log.actor }}</strong>
+                                    <div class="user-agent-tooltip" data-bs-toggle="tooltip" title="{{ log.user_agent }}">
+                                        <small class="text-muted">
+                                            {% if 'Chrome' in log.user_agent %}
+                                            <i class="bi bi-browser-chrome"></i> Chrome
+                                            {% elif 'Firefox' in log.user_agent %}
+                                            <i class="bi bi-browser-firefox"></i> Firefox
+                                            {% elif 'Safari' in log.user_agent %}
+                                            <i class="bi bi-browser-safari"></i> Safari
+                                            {% else %}
+                                            <i class="bi bi-globe"></i> Browser
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-{{
+                                    'success' if log.action == 'create'
+                                    else 'primary' if log.action == 'update'
+                                    else 'danger' if log.action == 'delete'
+                                    else 'info' if log.action in ['login', 'logout']
+                                    else 'secondary'
+                                }}">
+                                    {{ log.action.title() }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="entity-info">
+                                    <span class="entity-type">{{ log.entity_type.title() }}</span>
+                                    <small class="text-muted d-block">ID: {{ log.entity_id[:8] }}...</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="change-summary">
+                                    {% if log.diff %}
+                                    <small class="text-muted">
+                                        {% for key, value in log.diff.items() %}
+                                        <div>{{ key }}: {{ value }}</div>
+                                        {% endfor %}
+                                    </small>
+                                    {% else %}
+                                    <span class="text-muted">No changes</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <code>{{ log.ip_address }}</code>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('{{ log.id }}')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <nav aria-label="Audit log pagination">
+                <ul class="pagination justify-content-center">
+                    <li class="page-item">
+                        <a class="page-link" href="#" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                    <li class="page-item"><a class="page-link" href="#">2</a></li>
+                    <li class="page-item"><a class="page-link" href="#">3</a></li>
+                    <li class="page-item">
+                        <a class="page-link" href="#" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            {% else %}
+            <div class="empty-state text-center py-5">
+                <i class="bi bi-shield-check display-4 text-muted"></i>
+                <h5 class="mt-3">No Audit Events</h5>
+                <p class="text-muted">No audit events match your current filters.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Audit Detail Modal -->
+<div class="modal fade" id="auditDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Audit Event Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="auditDetailContent">
+                    <!-- Dynamic content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+// Filter functions
+function applyFilters() {
+    const action = document.getElementById('actionFilter').value;
+    const entity = document.getElementById('entityFilter').value;
+    const date = document.getElementById('dateFilter').value;
+    
+    const tableRows = document.querySelectorAll('#auditTable tbody tr');
+    
+    tableRows.forEach(row => {
+        const rowAction = row.getAttribute('data-action');
+        const rowEntity = row.getAttribute('data-entity');
+        const rowDate = row.querySelector('.timestamp div').textContent;
+        
+        const matchesAction = !action || rowAction === action;
+        const matchesEntity = !entity || rowEntity === entity;
+        const matchesDate = !date || rowDate === date;
+        
+        row.style.display = matchesAction && matchesEntity && matchesDate ? '' : 'none';
+    });
+}
+
+function clearFilters() {
+    document.getElementById('actionFilter').value = '';
+    document.getElementById('entityFilter').value = '';
+    document.getElementById('dateFilter').value = '';
+    
+    // Show all rows
+    const tableRows = document.querySelectorAll('#auditTable tbody tr');
+    tableRows.forEach(row => {
+        row.style.display = '';
+    });
+}
+
+// View audit details
+function viewDetails(auditId) {
+    // Sample audit detail data
+    const detailContent = `
+        <div class="audit-detail">
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Event ID:</strong> ${auditId}
+                </div>
+                <div class="col-md-6">
+                    <strong>Timestamp:</strong> 2024-01-15 14:30:22 UTC
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Actor:</strong> John Doe (admin)
+                </div>
+                <div class="col-md-6">
+                    <strong>IP Address:</strong> 192.168.1.100
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <strong>Action:</strong> Update
+                </div>
+                <div class="col-md-6">
+                    <strong>Entity:</strong> User (jane.smith@company.com)
+                </div>
+            </div>
+            <div class="mb-3">
+                <strong>User Agent:</strong>
+                <code>Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36</code>
+            </div>
+            <div class="mb-3">
+                <strong>Changes Made:</strong>
+                <div class="diff-viewer">
+                    <div class="diff-item">
+                        <span class="diff-field">Status:</span>
+                        <span class="diff-old">inactive</span>
+                        <i class="bi bi-arrow-right"></i>
+                        <span class="diff-new">active</span>
+                    </div>
+                    <div class="diff-item">
+                        <span class="diff-field">Department:</span>
+                        <span class="diff-old">HR</span>
+                        <i class="bi bi-arrow-right"></i>
+                        <span class="diff-new">Engineering</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('auditDetailContent').innerHTML = detailContent;
+    
+    const modal = new bootstrap.Modal(document.getElementById('auditDetailModal'));
+    modal.show();
+}
+
+// Export audit log
+function exportAuditLog() {
+    // Implement export functionality
+    const filters = {
+        action: document.getElementById('actionFilter').value,
+        entity: document.getElementById('entityFilter').value,
+        date: document.getElementById('dateFilter').value
+    };
+    
+    console.log('Exporting audit log with filters:', filters);
+    
+    // Create a temporary download link
+    const link = document.createElement('a');
+    link.href = '/api/audit/export?' + new URLSearchParams(filters);
+    link.download = `audit-log-${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+}
+
+// Auto-refresh audit log every 30 seconds
+setInterval(() => {
+    // In a real application, you would fetch new audit events
+    console.log('Refreshing audit log...');
+}, 30000);
+</script>
+{% endblock %}

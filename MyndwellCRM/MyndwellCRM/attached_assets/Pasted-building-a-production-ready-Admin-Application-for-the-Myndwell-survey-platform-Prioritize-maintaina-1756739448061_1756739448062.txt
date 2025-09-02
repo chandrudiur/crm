@@ -1,0 +1,101 @@
+building a production-ready Admin Application for the Myndwell survey platform. Prioritize maintainability, security, performance, accessibility (WCAG AA), and clear separation of concerns. Include tests, linting, and CI hooks.
+Admin Application (this build): user management, survey creation/deployment, reporting & automation.
+MongoDB Collections & Schemas (pydantic examples)
+6.1 Master Data
+
+CompanyMaster
+
+_id, name, domains, status, created_at, updated_at.
+
+PersonMaster
+
+_id, company_id, email, name, roles (list), status, metadata (k/v), timestamps.
+
+QuestionsMaster
+
+_id, code, text, type (single/multi/scale/free), choices [ {code,label,weight?} ], validation (min,max,regex,required).
+
+SurveyQuestionsMaster
+
+_id, survey_template_id, question_id, order, section, branching (conditions JSON), weights.
+
+6.2 Survey Design & Linkage
+
+CompSurveyQuestions
+
+_id, company_id, survey_template_id, question_refs (ordered list).
+
+PersonCompSurveyLink
+
+_id, person_id, company_id, survey_template_id, invite_channel (email/link), status (invited/started/completed), session_cookie_id?, timestamps.
+
+6.3 Results & Scores (read-only in Admin, used in Reports)
+
+PersonSurveyScores
+
+_id, person_id, survey_template_id, scores (by category/subcategory), total, percentiles, timestamps.
+
+CompSurveyScoreMapping
+
+_id, company_id, survey_template_id, aggregations (dept/location/etc.), benchmarks.
+
+RecommendationMaster
+
+_id, rule_id, label, content, thresholds (mapping score→recommendation).
+
+Provide pydantic models + CRUD data access helpers for each collection.
+
+7) Core Features (Pages, UX, APIs)
+7.1 Dashboard
+
+KPIs: active surveys, completion rate, pending invites, report runs (today/7d), quick links.
+
+Filters: by company, program, date range.
+
+7.2 User Management
+
+Pages: List, Create, Edit, Roles, Bulk import (CSV), Audit trail.
+
+Key flows: invite user via email (SES), reset password, deactivate/reactivate.
+
+API: POST /api/users, GET /api/users?company_id=..., PATCH /api/users/:id, POST /api/users/:id/roles.
+
+7.3 Survey Templates (Design Center)
+
+Create survey template: metadata (name, version, program), sections, ordered questions.
+
+Question bank selector (from QuestionsMaster) with search, drag-drop ordering.
+
+Branching/logic editor (simple builder: IF [answer/score] THEN [skip/show]).
+
+Versioning: clone from version, mark version as Draft/Ready/Archived.
+
+API: POST /api/surveys, GET /api/surveys, GET /api/surveys/:id, PATCH /api/surveys/:id, POST /api/surveys/:id/clone.
+
+7.4 Deployment Center
+
+Define deployment: company_id, survey_template_id, audience (all users / segment query / uploaded CSV), channel (email/link), window (start/end), reminders, max attempts.
+
+Email Template Setup: subject, body (placeholders: {{name}}, {{survey_link}}), preview, test send.
+
+Scheduling: create Prefect flow to issue invites at start time; reminders N days before end.
+
+Monitoring: live run status, sent/opens/clicks/completions, resend failures.
+
+API: POST /api/deployments, GET /api/deployments, POST /api/deployments/:id/start|pause|cancel, GET /api/deployments/:id/metrics.
+
+7.5 Reports Module
+
+Report Setup: choose template, KPIs, visualizations (bar/line/pie/table), slice by (dept, location, role), thresholds for recommendations; PDF/CSV export.
+
+Report Operations: one-off run, scheduled run (Prefect), delivery (email with S3 link).
+
+Data sources: PersonSurveyScores, CompSurveyScoreMapping, RecommendationMaster.
+
+API: POST /api/reports, POST /api/reports/:id/run, GET /api/reports/:id/status, GET /api/reports/:id/download.
+
+7.6 Audit & Logging (platform wide)
+
+Each CRUD operation writes an Audit Trail document: actor, action, entity, diff, ip, ua, ts.
+
+Expose an Audit page with filters and export.

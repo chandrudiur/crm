@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Survey Template - Myndwell Admin{% endblock %}
+{% block page_title %}Edit Survey Template{% endblock %}
+
+{% block content %}
+<div class="edit-survey-page">
+    <!-- Template Info -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Template Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="surveyForm">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="name" class="form-label">Template Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" value="{{ survey.name }}" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="version" class="form-label">Version *</label>
+                                <input type="text" class="form-control" id="version" name="version" value="{{ survey.version }}" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="program" class="form-label">Program *</label>
+                                <select class="form-select" id="program" name="program" required>
+                                    <option value="Wellness" {% if survey.program == 'Wellness' %}selected{% endif %}>Wellness</option>
+                                    <option value="Engagement" {% if survey.program == 'Engagement' %}selected{% endif %}>Engagement</option>
+                                    <option value="Culture" {% if survey.program == 'Culture' %}selected{% endif %}>Culture</option>
+                                    <option value="Performance" {% if survey.program == 'Performance' %}selected{% endif %}>Performance</option>
+                                    <option value="Exit" {% if survey.program == 'Exit' %}selected{% endif %}>Exit Interview</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="status" class="form-label">Status *</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="draft" {% if survey.status.value == 'draft' %}selected{% endif %}>Draft</option>
+                                    <option value="ready" {% if survey.status.value == 'ready' %}selected{% endif %}>Ready</option>
+                                    <option value="archived" {% if survey.status.value == 'archived' %}selected{% endif %}>Archived</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3">{{ survey.description }}</textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('surveys_index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Update Template</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Template Stats</h6>
+                </div>
+                <div class="card-body">
+                    <div class="stat-item">
+                        <span class="stat-label">Questions:</span>
+                        <span class="stat-value">{{ survey.questions|length }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Created:</span>
+                        <span class="stat-value">{{ survey.created_at.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Last Updated:</span>
+                        <span class="stat-value">{{ survey.updated_at.strftime('%Y-%m-%d') }}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Status:</span>
+                        <span class="badge bg-{{ 'success' if survey.status.value == 'ready' else 'secondary' }}">
+                            {{ survey.status.value.title() }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question Builder -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Question Builder</h5>
+            <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#questionBankModal">
+                <i class="bi bi-plus"></i> Add Questions
+            </button>
+        </div>
+        <div class="card-body">
+            {% if survey.questions %}
+            <div class="question-list" id="questionList">
+                {% for sq in survey.questions %}
+                {% set question = questions|selectattr('id', 'equalto', sq.question_id)|first %}
+                {% if question %}
+                <div class="question-item" data-question-id="{{ sq.question_id }}">
+                    <div class="question-header">
+                        <div class="question-order">{{ sq.order }}</div>
+                        <div class="question-content">
+                            <strong>{{ question.code }}</strong> - {{ question.text }}
+                            <div class="question-meta">
+                                <span class="badge bg-info">{{ question.type.value }}</span>
+                                <span class="text-muted">Section: {{ sq.section }}</span>
+                            </div>
+                        </div>
+                        <div class="question-actions">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="editQuestion('{{ sq.id }}')">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="removeQuestion('{{ sq.id }}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-question-circle display-4 text-muted"></i>
+                <h6 class="mt-3">No Questions Added</h6>
+                <p class="text-muted">Add questions from the question bank to build your survey.</p>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#questionBankModal">
+                    <i class="bi bi-plus"></i> Add Questions
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Question Bank Modal -->
+<div class="modal fade" id="questionBankModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Question Bank</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" placeholder="Search questions..." id="questionSearch">
+                </div>
+                
+                <div class="question-bank-list" id="questionBankList">
+                    {% for question in questions %}
+                    <div class="question-bank-item" data-question-id="{{ question.id }}">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="q_{{ question.id }}" value="{{ question.id }}">
+                            <label class="form-check-label" for="q_{{ question.id }}">
+                                <strong>{{ question.code }}</strong> - {{ question.text }}
+                                <div class="question-meta">
+                                    <span class="badge bg-info">{{ question.type.value }}</span>
+                                    {% if question.choices %}
+                                    <span class="text-muted">{{ question.choices|length }} choices</span>
+                                    {% endif %}
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="addSelectedQuestions()">Add Selected</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Question search
+document.getElementById('questionSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const questionItems = document.querySelectorAll('.question-bank-item');
+    
+    questionItems.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(searchTerm) ? '' : 'none';
+    });
+});
+
+// Add selected questions
+function addSelectedQuestions() {
+    const selectedQuestions = document.querySelectorAll('#questionBankList input[type="checkbox"]:checked');
+    
+    if (selectedQuestions.length === 0) {
+        alert('Please select at least one question.');
+        return;
+    }
+    
+    // Here you would implement the logic to add questions to the survey
+    // For now, we'll just close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('questionBankModal'));
+    modal.hide();
+    
+    // Reset checkboxes
+    selectedQuestions.forEach(checkbox => checkbox.checked = false);
+}
+
+// Edit question
+function editQuestion(questionId) {
+    // Implement question editing functionality
+    console.log('Edit question:', questionId);
+}
+
+// Remove question
+function removeQuestion(questionId) {
+    if (confirm('Are you sure you want to remove this question?')) {
+        // Implement question removal functionality
+        console.log('Remove question:', questionId);
+    }
+}
+</script>
+{% endblock %}

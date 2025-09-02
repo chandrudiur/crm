@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block title %}Monitor Deployment - Myndwell Admin{% endblock %}
+{% block page_title %}Monitor Deployment{% endblock %}
+
+{% block content %}
+<div class="monitor-deployment-page">
+    <!-- Deployment Header -->
+    <div class="deployment-header mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3>{{ deployment.name }}</h3>
+                <div class="deployment-meta">
+                    <span class="badge bg-{{ 'success' if deployment.status.value == 'active' else 'secondary' }} me-2">
+                        {{ deployment.status.value.title() }}
+                    </span>
+                    <span class="text-muted me-3">{{ company.name }}</span>
+                    <span class="text-muted">{{ survey.name }}</span>
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                <div class="btn-group">
+                    {% if deployment.status.value == 'active' %}
+                    <button class="btn btn-outline-warning">
+                        <i class="bi bi-pause"></i> Pause
+                    </button>
+                    {% endif %}
+                    <button class="btn btn-outline-danger">
+                        <i class="bi bi-stop"></i> Stop
+                    </button>
+                    <button class="btn btn-outline-secondary">
+                        <i class="bi bi-download"></i> Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ deployment.metrics.get('invites_sent', 0) }}</div>
+                <div class="metric-label">Invites Sent</div>
+                <div class="metric-change text-success">
+                    <i class="bi bi-arrow-up"></i> +12 today
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ deployment.metrics.get('responses_received', 0) }}</div>
+                <div class="metric-label">Responses</div>
+                <div class="metric-change text-success">
+                    <i class="bi bi-arrow-up"></i> +8 today
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-value">{{ deployment.metrics.get('completion_rate', 0) }}%</div>
+                <div class="metric-label">Completion Rate</div>
+                <div class="metric-change text-success">
+                    <i class="bi bi-arrow-up"></i> +2.3%
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="metric-card">
+                <div class="metric-value">
+                    {% if deployment.end_date %}
+                    {{ (deployment.end_date - deployment.start_date).days if deployment.start_date else 0 }}
+                    {% else %}
+                    ∞
+                    {% endif %}
+                </div>
+                <div class="metric-label">Days Remaining</div>
+                <div class="metric-change text-muted">
+                    {% if deployment.end_date %}
+                    Until {{ deployment.end_date.strftime('%m/%d') }}
+                    {% else %}
+                    No end date
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts and Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Response Timeline</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="responseTimelineChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Response Status</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="responseStatusChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Analytics -->
+    <div class="row mb-4">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Email Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="performance-metric">
+                        <div class="d-flex justify-content-between">
+                            <span>Delivered</span>
+                            <span>{{ deployment.metrics.get('emails_delivered', 0) }}/{{ deployment.metrics.get('invites_sent', 0) }}</span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-success" style="width: 98%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="performance-metric">
+                        <div class="d-flex justify-content-between">
+                            <span>Opened</span>
+                            <span>{{ deployment.metrics.get('emails_opened', 0) }}/{{ deployment.metrics.get('invites_sent', 0) }}</span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-info" style="width: 65%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="performance-metric">
+                        <div class="d-flex justify-content-between">
+                            <span>Clicked</span>
+                            <span>{{ deployment.metrics.get('emails_clicked', 0) }}/{{ deployment.metrics.get('invites_sent', 0) }}</span>
+                        </div>
+                        <div class="progress mb-2">
+                            <div class="progress-bar bg-warning" style="width: 45%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="activity-timeline">
+                        <div class="activity-item">
+                            <div class="activity-time">2 min ago</div>
+                            <div class="activity-content">
+                                <i class="bi bi-check-circle text-success"></i>
+                                Survey completed by Jane Smith
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-time">15 min ago</div>
+                            <div class="activity-content">
+                                <i class="bi bi-envelope-open text-info"></i>
+                                Email opened by John Doe
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-time">1 hour ago</div>
+                            <div class="activity-content">
+                                <i class="bi bi-send text-primary"></i>
+                                Reminder emails sent to 15 recipients
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-time">3 hours ago</div>
+                            <div class="activity-content">
+                                <i class="bi bi-check-circle text-success"></i>
+                                Survey completed by Mike Johnson
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipient Status Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Recipient Status</h5>
+            <div class="table-controls">
+                <select class="form-select form-select-sm" id="statusFilter">
+                    <option value="">All Statuses</option>
+                    <option value="sent">Sent</option>
+                    <option value="opened">Opened</option>
+                    <option value="clicked">Clicked</option>
+                    <option value="completed">Completed</option>
+                </select>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="recipientTable">
+                    <thead>
+                        <tr>
+                            <th>Recipient</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Sent</th>
+                            <th>Opened</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr data-status="completed">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar me-2">
+                                        <span class="avatar-text">JS</span>
+                                    </div>
+                                    <div>
+                                        <strong>Jane Smith</strong>
+                                        <div class="text-muted small">jane.smith@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Engineering</td>
+                            <td><span class="badge bg-success">Completed</span></td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>2 min ago</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr data-status="clicked">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar me-2">
+                                        <span class="avatar-text">JD</span>
+                                    </div>
+                                    <div>
+                                        <strong>John Doe</strong>
+                                        <div class="text-muted small">john.doe@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>HR</td>
+                            <td><span class="badge bg-warning">In Progress</span></td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>15 min ago</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-envelope"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr data-status="opened">
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar me-2">
+                                        <span class="avatar-text">MJ</span>
+                                    </div>
+                                    <div>
+                                        <strong>Mike Johnson</strong>
+                                        <div class="text-muted small">mike.johnson@company.com</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>Sales</td>
+                            <td><span class="badge bg-info">Opened</span></td>
+                            <td>✓</td>
+                            <td>✓</td>
+                            <td>2 hours ago</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-envelope"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Response Timeline Chart
+const timelineCtx = document.getElementById('responseTimelineChart').getContext('2d');
+new Chart(timelineCtx, {
+    type: 'line',
+    data: {
+        labels: ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+        datasets: [{
+            label: 'Responses',
+            data: [5, 12, 8, 15, 7, 9, 6],
+            borderColor: 'rgb(27, 77, 114)',
+            backgroundColor: 'rgba(27, 77, 114, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Response Status Chart
+const statusCtx = document.getElementById('responseStatusChart').getContext('2d');
+new Chart(statusCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Completed', 'In Progress', 'Not Started'],
+        datasets: [{
+            data: [32, 8, 5],
+            backgroundColor: [
+                'rgb(27, 77, 114)',
+                'rgb(230, 126, 34)',
+                'rgb(149, 165, 166)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Status filter for recipient table
+document.getElementById('statusFilter').addEventListener('change', function(e) {
+    const filterValue = e.target.value;
+    const tableRows = document.querySelectorAll('#recipientTable tbody tr');
+    
+    tableRows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        row.style.display = !filterValue || status === filterValue ? '' : 'none';
+    });
+});
+
+// Auto-refresh data every 30 seconds
+setInterval(() => {
+    // Implement real-time data refresh
+    console.log('Refreshing deployment data...');
+}, 30000);
+</script>
+{% endblock %}

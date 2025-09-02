@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Create Survey Template - Myndwell Admin{% endblock %}
+{% block page_title %}Create Survey Template{% endblock %}
+
+{% block content %}
+<div class="create-survey-page">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Template Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="surveyForm">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="name" class="form-label">Template Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="version" class="form-label">Version *</label>
+                                <input type="text" class="form-control" id="version" name="version" value="1.0" required>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="program" class="form-label">Program *</label>
+                                <select class="form-select" id="program" name="program" required>
+                                    <option value="">Select Program</option>
+                                    <option value="Wellness">Wellness</option>
+                                    <option value="Engagement">Engagement</option>
+                                    <option value="Culture">Culture</option>
+                                    <option value="Performance">Performance</option>
+                                    <option value="Exit">Exit Interview</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="status" class="form-label">Status *</label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="draft">Draft</option>
+                                    <option value="ready">Ready</option>
+                                    <option value="archived">Archived</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="{{ url_for('surveys_index') }}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Create Template</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">Template Guidelines</h6>
+                </div>
+                <div class="card-body">
+                    <div class="guideline-item">
+                        <i class="bi bi-lightbulb text-primary"></i>
+                        <div>
+                            <strong>Naming Convention</strong>
+                            <small class="text-muted d-block">Use descriptive names that include the survey purpose and time period.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <i class="bi bi-tag text-success"></i>
+                        <div>
+                            <strong>Version Control</strong>
+                            <small class="text-muted d-block">Follow semantic versioning (e.g., 1.0, 1.1, 2.0) for major changes.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <i class="bi bi-file-text text-info"></i>
+                        <div>
+                            <strong>Description</strong>
+                            <small class="text-muted d-block">Provide clear context about the survey's purpose and target audience.</small>
+                        </div>
+                    </div>
+                    
+                    <div class="guideline-item">
+                        <i class="bi bi-check-circle text-warning"></i>
+                        <div>
+                            <strong>Status</strong>
+                            <small class="text-muted d-block">Use 'Draft' for templates under development, 'Ready' for deployment.</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Myndwell Admin{% endblock %}
+{% block page_title %}Reports & Analytics{% endblock %}
+
+{% block content %}
+<div class="reports-page">
+    <!-- Header Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="report-filters">
+            <div class="row g-2">
+                <div class="col-auto">
+                    <select class="form-select" id="companyFilter">
+                        <option value="">All Companies</option>
+                        {% for company in companies %}
+                        <option value="{{ company.id }}">{{ company.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select" id="timeFilter">
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                        <option value="90d">Last 90 days</option>
+                        <option value="1y">Last year</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-outline-primary" onclick="applyFilters()">
+                        <i class="bi bi-funnel"></i> Apply
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createReportModal">
+                <i class="bi bi-plus"></i> Create Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Overview Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="report-value">{{ deployments|length }}</div>
+                            <div class="report-label">Total Deployments</div>
+                        </div>
+                        <i class="bi bi-send report-icon text-primary"></i>
+                    </div>
+                    <div class="report-change text-success">
+                        <i class="bi bi-arrow-up"></i> +12% vs last month
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="report-value">2,847</div>
+                            <div class="report-label">Total Responses</div>
+                        </div>
+                        <i class="bi bi-chat-square-text report-icon text-success"></i>
+                    </div>
+                    <div class="report-change text-success">
+                        <i class="bi bi-arrow-up"></i> +8% vs last month
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="report-value">78%</div>
+                            <div class="report-label">Avg Completion Rate</div>
+                        </div>
+                        <i class="bi bi-graph-up report-icon text-info"></i>
+                    </div>
+                    <div class="report-change text-success">
+                        <i class="bi bi-arrow-up"></i> +2.3% vs last month
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card report-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="report-value">4.2</div>
+                            <div class="report-label">Avg Satisfaction</div>
+                        </div>
+                        <i class="bi bi-star report-icon text-warning"></i>
+                    </div>
+                    <div class="report-change text-success">
+                        <i class="bi bi-arrow-up"></i> +0.3 vs last month
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Response Trends</h5>
+                    <div class="chart-controls">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-secondary active" onclick="changeChart('responses')">Responses</button>
+                            <button class="btn btn-outline-secondary" onclick="changeChart('completion')">Completion</button>
+                            <button class="btn btn-outline-secondary" onclick="changeChart('satisfaction')">Satisfaction</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <canvas id="trendsChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Survey Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="distributionChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Company Performance -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Company Performance</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Company</th>
+                                    <th>Active Surveys</th>
+                                    <th>Total Responses</th>
+                                    <th>Completion Rate</th>
+                                    <th>Avg Satisfaction</th>
+                                    <th>Last Activity</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for company in companies %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="company-avatar me-2">
+                                                <span class="company-initial">{{ company.name[0] }}</span>
+                                            </div>
+                                            <strong>{{ company.name }}</strong>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ (deployments | selectattr('company_id', 'equalto', company.id) | selectattr('status.value', 'equalto', 'active') | list | length) }}</span>
+                                    </td>
+                                    <td>847</td>
+                                    <td>
+                                        <div class="progress" style="width: 100px;">
+                                            <div class="progress-bar" style="width: 82%"></div>
+                                        </div>
+                                        <small>82%</small>
+                                    </td>
+                                    <td>
+                                        <div class="satisfaction-rating">
+                                            <span class="rating-value">4.3</span>
+                                            <div class="rating-stars">
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                                <i class="bi bi-star-fill text-warning"></i>
+                                                <i class="bi bi-star text-muted"></i>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>2 hours ago</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetailedReport('{{ company.id }}')">
+                                            <i class="bi bi-eye"></i> View Report
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="quick-action-card">
+                                <i class="bi bi-file-pdf action-icon"></i>
+                                <h6>Export PDF Report</h6>
+                                <p class="text-muted">Generate comprehensive PDF report</p>
+                                <button class="btn btn-outline-primary btn-sm">Generate</button>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="quick-action-card">
+                                <i class="bi bi-file-excel action-icon"></i>
+                                <h6>Export to Excel</h6>
+                                <p class="text-muted">Download raw data in Excel format</p>
+                                <button class="btn btn-outline-success btn-sm">Download</button>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="quick-action-card">
+                                <i class="bi bi-calendar-event action-icon"></i>
+                                <h6>Schedule Report</h6>
+                                <p class="text-muted">Set up automated report delivery</p>
+                                <button class="btn btn-outline-info btn-sm">Schedule</button>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="quick-action-card">
+                                <i class="bi bi-share action-icon"></i>
+                                <h6>Share Dashboard</h6>
+                                <p class="text-muted">Share live dashboard with stakeholders</p>
+                                <button class="btn btn-outline-warning btn-sm">Share</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Report Modal -->
+<div class="modal fade" id="createReportModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create Custom Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportForm">
+                    <div class="mb-3">
+                        <label for="reportName" class="form-label">Report Name</label>
+                        <input type="text" class="form-control" id="reportName" required>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="reportCompany" class="form-label">Company</label>
+                            <select class="form-select" id="reportCompany">
+                                <option value="">All Companies</option>
+                                {% for company in companies %}
+                                <option value="{{ company.id }}">{{ company.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="reportType" class="form-label">Report Type</label>
+                            <select class="form-select" id="reportType" required>
+                                <option value="">Select Type</option>
+                                <option value="summary">Executive Summary</option>
+                                <option value="detailed">Detailed Analysis</option>
+                                <option value="comparison">Company Comparison</option>
+                                <option value="trends">Trend Analysis</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Include Metrics</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="metric_responses" checked>
+                            <label class="form-check-label" for="metric_responses">Response Rates</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="metric_satisfaction" checked>
+                            <label class="form-check-label" for="metric_satisfaction">Satisfaction Scores</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="metric_engagement">
+                            <label class="form-check-label" for="metric_engagement">Engagement Metrics</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="metric_demographics">
+                            <label class="form-check-label" for="metric_demographics">Demographics Breakdown</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Trends Chart
+const trendsCtx = document.getElementById('trendsChart').getContext('2d');
+const trendsChart = new Chart(trendsCtx, {
+    type: 'line',
+    data: {
+        labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
+        datasets: [{
+            label: 'Responses',
+            data: [145, 189, 167, 203, 178, 195],
+            borderColor: 'rgb(27, 77, 114)',
+            backgroundColor: 'rgba(27, 77, 114, 0.1)',
+            tension: 0.4
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true
+            }
+        }
+    }
+});
+
+// Distribution Chart
+const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+new Chart(distributionCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Wellness', 'Engagement', 'Culture', 'Performance'],
+        datasets: [{
+            data: [35, 28, 22, 15],
+            backgroundColor: [
+                'rgb(27, 77, 114)',
+                'rgb(230, 126, 34)',
+                'rgb(46, 204, 113)',
+                'rgb(155, 89, 182)'
+            ]
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false
+    }
+});
+
+// Chart switching
+function changeChart(type) {
+    // Update active button
+    document.querySelectorAll('.chart-controls .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Update chart data based on type
+    const newData = {
+        'responses': [145, 189, 167, 203, 178, 195],
+        'completion': [78, 82, 76, 85, 80, 83],
+        'satisfaction': [4.1, 4.3, 4.0, 4.5, 4.2, 4.4]
+    };
+    
+    trendsChart.data.datasets[0].data = newData[type];
+    trendsChart.data.datasets[0].label = type.charAt(0).toUpperCase() + type.slice(1);
+    trendsChart.update();
+}
+
+// Filter functions
+function applyFilters() {
+    const company = document.getElementById('companyFilter').value;
+    const time = document.getElementById('timeFilter').value;
+    
+    // Implement filter logic
+    console.log('Applying filters:', { company, time });
+}
+
+function viewDetailedReport(companyId) {
+    // Navigate to detailed company report
+    window.location.href = `/reports/company/${companyId}`;
+}
+
+function generateReport() {
+    const reportName = document.getElementById('reportName').value;
+    const reportType = document.getElementById('reportType').value;
+    
+    if (!reportName || !reportType) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Implement report generation
+    const modal = bootstrap.Modal.getInstance(document.getElementById('createReportModal'));
+    modal.hide();
+    
+    // Show success message
+    alert('Report generation started. You will receive an email when it\'s ready.');
+}
+</script>
+{% endblock %}

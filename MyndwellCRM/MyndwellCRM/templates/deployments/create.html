@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+
+{% block title %}Create Deployment - Myndwell Admin{% endblock %}
+{% block page_title %}Create Survey Deployment{% endblock %}
+
+{% block content %}
+<div class="create-deployment-page">
+    <form method="POST" id="deploymentForm">
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <!-- Basic Information -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Basic Information</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="name" class="form-label">Deployment Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="channel" class="form-label">Channel *</label>
+                                <select class="form-select" id="channel" name="channel" required>
+                                    <option value="email">Email</option>
+                                    <option value="link">Direct Link</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="company_id" class="form-label">Company *</label>
+                                <select class="form-select" id="company_id" name="company_id" required>
+                                    <option value="">Select Company</option>
+                                    {% for company in companies %}
+                                    <option value="{{ company.id }}">{{ company.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="survey_template_id" class="form-label">Survey Template *</label>
+                                <select class="form-select" id="survey_template_id" name="survey_template_id" required>
+                                    <option value="">Select Survey</option>
+                                    {% for survey in surveys %}
+                                    <option value="{{ survey.id }}">{{ survey.name }} (v{{ survey.version }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audience Selection -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Audience Selection</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Target Audience *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="audience_all" name="audience_type" value="all" checked>
+                                <label class="form-check-label" for="audience_all">
+                                    All company users
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="audience_segment" name="audience_type" value="segment">
+                                <label class="form-check-label" for="audience_segment">
+                                    Specific segment (filtered)
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" id="audience_csv" name="audience_type" value="csv">
+                                <label class="form-check-label" for="audience_csv">
+                                    Upload CSV file
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Segment Filters (hidden by default) -->
+                        <div id="segmentFilters" class="segment-filters" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="filter_department" class="form-label">Department</label>
+                                    <input type="text" class="form-control" id="filter_department" name="filter_department">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="filter_location" class="form-label">Location</label>
+                                    <input type="text" class="form-control" id="filter_location" name="filter_location">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- CSV Upload (hidden by default) -->
+                        <div id="csvUpload" class="csv-upload" style="display: none;">
+                            <div class="mb-3">
+                                <label for="csv_file" class="form-label">CSV File</label>
+                                <input type="file" class="form-control" id="csv_file" name="csv_file" accept=".csv">
+                                <div class="form-text">Expected columns: email, name</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Email Template (shown when email channel selected) -->
+                <div class="card mb-4" id="emailTemplateCard">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Email Template</h5>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="previewEmail()">
+                            <i class="bi bi-eye"></i> Preview
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="email_subject" class="form-label">Subject Line *</label>
+                            <input type="text" class="form-control" id="email_subject" name="email_subject" 
+                                   value="Your Voice Matters - Complete Our Survey">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email_preview" class="form-label">Preview Text</label>
+                            <input type="text" class="form-control" id="email_preview" name="email_preview" 
+                                   placeholder="Help us improve your experience">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="email_body" class="form-label">Email Body *</label>
+                            <textarea class="form-control" id="email_body" name="email_body" rows="8">Dear {{name}},
+
+We value your feedback and would like to invite you to participate in our survey.
+
+Your responses are completely confidential and will help us improve our workplace.
+
+Please click the link below to begin:
+{{survey_link}}
+
+Thank you for your time!
+
+Best regards,
+HR Team</textarea>
+                        </div>
+
+                        <div class="email-template-help">
+                            <small class="text-muted">
+                                Available placeholders: <code>{{name}}</code>, <code>{{survey_link}}</code>, <code>{{company_name}}</code>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Scheduling -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Scheduling</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="end_date" name="end_date">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="max_attempts" class="form-label">Max Attempts</label>
+                                <select class="form-select" id="max_attempts" name="max_attempts">
+                                    <option value="1">1 attempt</option>
+                                    <option value="2">2 attempts</option>
+                                    <option value="3">3 attempts</option>
+                                    <option value="unlimited">Unlimited</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="card sticky-top">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Deployment Summary</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="summary-item">
+                            <span class="summary-label">Company:</span>
+                            <span class="summary-value" id="summary-company">Not selected</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Survey:</span>
+                            <span class="summary-value" id="summary-survey">Not selected</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Channel:</span>
+                            <span class="summary-value" id="summary-channel">Email</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Audience:</span>
+                            <span class="summary-value" id="summary-audience">All users</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Estimated Recipients:</span>
+                            <span class="summary-value" id="summary-recipients">-</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">Create Deployment</button>
+                            <a href="{{ url_for('deployments_index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Email Preview Modal -->
+<div class="modal fade" id="emailPreviewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Email Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="email-preview">
+                    <div class="email-header">
+                        <strong>Subject:</strong> <span id="preview-subject"></span>
+                    </div>
+                    <div class="email-body" id="preview-body"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Send Test Email</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Audience type change handler
+document.querySelectorAll('input[name="audience_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const segmentFilters = document.getElementById('segmentFilters');
+        const csvUpload = document.getElementById('csvUpload');
+        
+        segmentFilters.style.display = this.value === 'segment' ? 'block' : 'none';
+        csvUpload.style.display = this.value === 'csv' ? 'block' : 'none';
+        
+        updateSummary();
+    });
+});
+
+// Channel change handler
+document.getElementById('channel').addEventListener('change', function() {
+    const emailCard = document.getElementById('emailTemplateCard');
+    emailCard.style.display = this.value === 'email' ? 'block' : 'none';
+    updateSummary();
+});
+
+// Form field change handlers for summary
+document.getElementById('company_id').addEventListener('change', updateSummary);
+document.getElementById('survey_template_id').addEventListener('change', updateSummary);
+
+function updateSummary() {
+    const companySelect = document.getElementById('company_id');
+    const surveySelect = document.getElementById('survey_template_id');
+    const channelSelect = document.getElementById('channel');
+    const audienceType = document.querySelector('input[name="audience_type"]:checked');
+    
+    document.getElementById('summary-company').textContent = 
+        companySelect.selectedOptions[0]?.text || 'Not selected';
+    document.getElementById('summary-survey').textContent = 
+        surveySelect.selectedOptions[0]?.text || 'Not selected';
+    document.getElementById('summary-channel').textContent = 
+        channelSelect.value.charAt(0).toUpperCase() + channelSelect.value.slice(1);
+    document.getElementById('summary-audience').textContent = 
+        audienceType.value === 'all' ? 'All users' :
+        audienceType.value === 'segment' ? 'Filtered segment' : 'CSV upload';
+}
+
+function previewEmail() {
+    const subject = document.getElementById('email_subject').value || 'Subject line';
+    const body = document.getElementById('email_body').value || 'Email body';
+    
+    // Replace placeholders with sample data
+    const previewSubject = subject.replace(/\{\{(\w+)\}\}/g, (match, placeholder) => {
+        const replacements = {
+            'name': 'John Doe',
+            'company_name': 'Your Company',
+            'survey_link': 'https://survey.example.com/abc123'
+        };
+        return replacements[placeholder] || match;
+    });
+    
+    const previewBody = body.replace(/\{\{(\w+)\}\}/g, (match, placeholder) => {
+        const replacements = {
+            'name': 'John Doe',
+            'company_name': 'Your Company',
+            'survey_link': '<a href="https://survey.example.com/abc123">Click here to take the survey</a>'
+        };
+        return replacements[placeholder] || match;
+    });
+    
+    document.getElementById('preview-subject').textContent = previewSubject;
+    document.getElementById('preview-body').innerHTML = previewBody.replace(/\n/g, '<br>');
+    
+    const modal = new bootstrap.Modal(document.getElementById('emailPreviewModal'));
+    modal.show();
+}
+
+// Initialize summary
+updateSummary();
+</script>
+{% endblock %}
